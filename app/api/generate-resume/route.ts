@@ -1,310 +1,545 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { resumeData, format } = await request.json()
+    const { resumeData, format } = await request.json();
 
     if (format === "pdf") {
-      return await generatePDFResponse(resumeData)
+      return await generatePDFResponse(resumeData);
     } else if (format === "docx") {
-      return await generateDOCXResponse(resumeData)
+      return await generateDOCXResponse(resumeData);
     } else {
-      return NextResponse.json({ error: "Invalid format" }, { status: 400 })
+      return NextResponse.json({ error: "Invalid format" }, { status: 400 });
     }
   } catch (error) {
-    console.error("Resume generation error:", error)
-    return NextResponse.json({ error: "Failed to generate resume" }, { status: 500 })
+    console.error("Resume generation error:", error);
+    return NextResponse.json(
+      { error: "Failed to generate resume" },
+      { status: 500 }
+    );
   }
 }
 
 async function generatePDFResponse(resumeData: any) {
   try {
-    // For PDF, we'll return the HTML and let the client handle PDF generation
-    const html = generatePrintOptimizedHTML(resumeData)
+    // Import jsPDF for client-side PDF generation
+    const { jsPDF } = await import("jspdf");
 
-    return new NextResponse(html, {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const { personalInfo, experiences, education, skills } = resumeData;
+
+    let yPosition = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentWidth = pageWidth - margin * 2;
+
+    // Helper function to add text with word wrapping
+    const addWrappedText = (
+      text: string,
+      x: number,
+      y: number,
+      maxWidth: number,
+      fontSize = 10
+    ) => {
+      doc.setFontSize(fontSize);
+      const lines = doc.splitTextToSize(text, maxWidth);
+      doc.text(lines, x, y);
+      return y + lines.length * (fontSize * 0.35);
+    };
+
+    // Header - Name
+    doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(44, 62, 80);
+    doc.text(personalInfo.fullName, pageWidth / 2, yPosition, {
+      align: "center",
+    });
+    yPosition += 10;
+
+    // Contact Information
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(127, 140, 141);
+    const contactInfo = [
+      personalInfo.email,
+      personalInfo.phone,
+      personalInfo.location,
+      personalInfo.linkedin,
+    ]
+      .filter(Boolean)
+      .join(" • ");
+    doc.text(contactInfo, pageWidth / 2, yPosition, { align: "center" });
+    yPosition += 15;
+
+    // Separator line
+    doc.setDrawColor(52, 152, 219);
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 10;
+
+    // Professional Summary
+    if (personalInfo.summary) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(44, 62, 80);
+      doc.text("PROFESSIONAL SUMMARY", margin, yPosition);
+      yPosition += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+      yPosition = addWrappedText(
+        personalInfo.summary,
+        margin,
+        yPosition,
+        contentWidth,
+        10
+      );
+      yPosition += 10;
+    }
+
+    // Work Experience
+    if (experiences.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(44, 62, 80);
+      doc.text("WORK EXPERIENCE", margin, yPosition);
+      yPosition += 8;
+
+      experiences.forEach((exp: any) => {
+        // Check if we need a new page
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        // Job Title
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 0, 0);
+        doc.text(exp.position, margin, yPosition);
+        yPosition += 6;
+
+        // Company and Date
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(127, 140, 141);
+        doc.text(`${exp.company}`, margin, yPosition);
+        doc.text(
+          `${exp.startDate} - ${exp.endDate || "Present"}`,
+          pageWidth - margin,
+          yPosition,
+          { align: "right" }
+        );
+        yPosition += 8;
+
+        // Description
+        if (exp.description) {
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          const descriptionLines = exp.description
+            .split("\n")
+            .filter((line: string) => line.trim());
+          descriptionLines.forEach((line: string) => {
+            const bulletPoint = line.trim().startsWith("•")
+              ? line
+              : `• ${line}`;
+            yPosition = addWrappedText(
+              bulletPoint,
+              margin + 5,
+              yPosition,
+              contentWidth - 5,
+              10
+            );
+            yPosition += 2;
+          });
+        }
+        yPosition += 8;
+      });
+    }
+
+    // Education
+    if (education.length > 0) {
+      if (yPosition > 220) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(44, 62, 80);
+      doc.text("EDUCATION", margin, yPosition);
+      yPosition += 8;
+
+      education.forEach((edu: any) => {
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 0, 0);
+        doc.text(
+          `${edu.degree}${edu.field ? ` in ${edu.field}` : ""}`,
+          margin,
+          yPosition
+        );
+        yPosition += 6;
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(127, 140, 141);
+        doc.text(edu.institution, margin, yPosition);
+        doc.text(edu.graduationDate, pageWidth - margin, yPosition, {
+          align: "right",
+        });
+        yPosition += 10;
+      });
+    }
+
+    // Skills
+    if (skills.length > 0) {
+      if (yPosition > 240) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(44, 62, 80);
+      doc.text("SKILLS", margin, yPosition);
+      yPosition += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+      const skillsText = skills.map((skill: any) => skill.name).join(" • ");
+      yPosition = addWrappedText(
+        skillsText,
+        margin,
+        yPosition,
+        contentWidth,
+        10
+      );
+    }
+
+    // Generate PDF buffer
+    const pdfBuffer = doc.output("arraybuffer");
+
+    return new NextResponse(pdfBuffer, {
       headers: {
-        "Content-Type": "text/html",
-        "Content-Disposition": `attachment; filename="${resumeData.personalInfo.fullName.replace(/\s+/g, "_")}_Resume.html"`,
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${personalInfo.fullName.replace(
+          /\s+/g,
+          "_"
+        )}_Resume.pdf"`,
       },
-    })
+    });
   } catch (error) {
-    console.error("PDF generation error:", error)
-    throw error
+    console.error("PDF generation error:", error);
+    return NextResponse.json(
+      { error: "Failed to generate PDF. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
 async function generateDOCXResponse(resumeData: any) {
   try {
-    // Generate RTF format which can be opened by Word
-    const rtf = generateRTF(resumeData)
+    const {
+      Document,
+      Packer,
+      Paragraph,
+      TextRun,
+      HeadingLevel,
+      AlignmentType,
+      BorderStyle,
+      UnderlineType,
+    } = await import("docx");
 
-    return new NextResponse(rtf, {
+    const { personalInfo, experiences, education, skills } = resumeData;
+
+    const docSections = [];
+
+    // Header with name
+    docSections.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: personalInfo.fullName,
+            bold: true,
+            size: 32,
+            color: "2c3e50",
+            font: "Arial",
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+      })
+    );
+
+    // Contact information
+    const contactInfo = [
+      personalInfo.email,
+      personalInfo.phone,
+      personalInfo.location,
+      personalInfo.linkedin,
+    ]
+      .filter(Boolean)
+      .join(" • ");
+
+    docSections.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: contactInfo,
+            size: 20,
+            color: "7f8c8d",
+            font: "Arial",
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 300 },
+        border: {
+          bottom: {
+            color: "3498db",
+            space: 1,
+            style: BorderStyle.SINGLE,
+            size: 6,
+          },
+        },
+      })
+    );
+
+    // Professional Summary
+    if (personalInfo.summary) {
+      docSections.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: "PROFESSIONAL SUMMARY",
+              bold: true,
+              size: 24,
+              color: "2c3e50",
+              font: "Arial",
+            }),
+          ],
+          spacing: { before: 200, after: 150 },
+        })
+      );
+
+      docSections.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: personalInfo.summary,
+              size: 22,
+              font: "Times New Roman",
+            }),
+          ],
+          spacing: { after: 300 },
+          indent: { left: 200, right: 200 },
+        })
+      );
+    }
+
+    // Work Experience
+    if (experiences.length > 0) {
+      docSections.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: "WORK EXPERIENCE",
+              bold: true,
+              size: 24,
+              color: "2c3e50",
+              font: "Arial",
+            }),
+          ],
+          spacing: { before: 200, after: 150 },
+        })
+      );
+
+      experiences.forEach((exp: any) => {
+        docSections.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: exp.position,
+                bold: true,
+                size: 22,
+                font: "Times New Roman",
+              }),
+            ],
+            spacing: { before: 150, after: 50 },
+          })
+        );
+
+        docSections.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${exp.company} | ${exp.startDate} - ${
+                  exp.endDate || "Present"
+                }`,
+                color: "7f8c8d",
+                size: 20,
+                font: "Times New Roman",
+              }),
+            ],
+            spacing: { after: 100 },
+          })
+        );
+
+        if (exp.description) {
+          const descriptionLines = exp.description
+            .split("\n")
+            .filter((line: string) => line.trim());
+          descriptionLines.forEach((line: string) => {
+            const bulletText = line.trim().startsWith("•") ? line : `• ${line}`;
+            docSections.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: bulletText,
+                    size: 20,
+                    font: "Times New Roman",
+                  }),
+                ],
+                spacing: { after: 50 },
+                indent: { left: 300 },
+              })
+            );
+          });
+        }
+
+        docSections.push(
+          new Paragraph({
+            children: [new TextRun({ text: "" })],
+            spacing: { after: 150 },
+          })
+        );
+      });
+    }
+
+    // Education
+    if (education.length > 0) {
+      docSections.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: "EDUCATION",
+              bold: true,
+              size: 24,
+              color: "2c3e50",
+              font: "Arial",
+            }),
+          ],
+          spacing: { before: 200, after: 150 },
+        })
+      );
+
+      education.forEach((edu: any) => {
+        docSections.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${edu.degree}${edu.field ? ` in ${edu.field}` : ""}`,
+                bold: true,
+                size: 22,
+                font: "Times New Roman",
+              }),
+            ],
+            spacing: { before: 100, after: 50 },
+          })
+        );
+
+        docSections.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${edu.institution} | ${edu.graduationDate}`,
+                color: "7f8c8d",
+                size: 20,
+                font: "Times New Roman",
+              }),
+            ],
+            spacing: { after: 150 },
+          })
+        );
+      });
+    }
+
+    // Skills
+    if (skills.length > 0) {
+      docSections.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: "SKILLS",
+              bold: true,
+              size: 24,
+              color: "2c3e50",
+              font: "Arial",
+            }),
+          ],
+          spacing: { before: 200, after: 150 },
+        })
+      );
+
+      const skillsText = skills.map((skill: any) => skill.name).join(" • ");
+      docSections.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: skillsText,
+              size: 20,
+              font: "Times New Roman",
+            }),
+          ],
+          spacing: { after: 100 },
+        })
+      );
+    }
+
+    // Create the document
+    const doc = new Document({
+      sections: [
+        {
+          properties: {
+            page: {
+              margin: {
+                top: 720,
+                right: 720,
+                bottom: 720,
+                left: 720,
+              },
+            },
+          },
+          children: docSections,
+        },
+      ],
+    });
+
+    // Generate buffer
+    const buffer = await Packer.toBuffer(doc);
+
+    return new NextResponse(buffer, {
       headers: {
-        "Content-Type": "application/rtf",
-        "Content-Disposition": `attachment; filename="${resumeData.personalInfo.fullName.replace(/\s+/g, "_")}_Resume.rtf"`,
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="${personalInfo.fullName.replace(
+          /\s+/g,
+          "_"
+        )}_Resume.docx"`,
       },
-    })
+    });
   } catch (error) {
-    console.error("DOCX generation error:", error)
-    throw error
+    console.error("DOCX generation error:", error);
+    return NextResponse.json(
+      { error: "Failed to generate DOCX. Please try again." },
+      { status: 500 }
+    );
   }
-}
-
-function generatePrintOptimizedHTML(resumeData: any) {
-  const { personalInfo, experiences, education, skills } = resumeData
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>${personalInfo.fullName} - Resume</title>
-    <style>
-        @page {
-            size: A4;
-            margin: 0.5in;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body { 
-            font-family: 'Arial', 'Helvetica', sans-serif; 
-            line-height: 1.6; 
-            color: #333; 
-            background: white;
-            font-size: 11pt;
-        }
-        .container {
-            max-width: 8.5in;
-            margin: 0 auto;
-            padding: 0.5in;
-        }
-        .header { 
-            text-align: center; 
-            margin-bottom: 30px; 
-            border-bottom: 3px solid #2563eb; 
-            padding-bottom: 15px; 
-        }
-        .name { 
-            font-size: 24pt; 
-            font-weight: bold; 
-            color: #2563eb; 
-            margin-bottom: 8px; 
-            letter-spacing: 1px;
-        }
-        .contact { 
-            font-size: 10pt; 
-            color: #666; 
-            line-height: 1.4;
-        }
-        .section { 
-            margin-bottom: 25px; 
-            page-break-inside: avoid;
-        }
-        .section-title { 
-            font-size: 14pt; 
-            font-weight: bold; 
-            color: #2563eb; 
-            margin-bottom: 12px; 
-            border-bottom: 1px solid #ddd; 
-            padding-bottom: 4px; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .summary { 
-            font-style: italic; 
-            margin-bottom: 15px; 
-            padding: 12px;
-            background: #f8fafc;
-            border-left: 4px solid #2563eb;
-            border-radius: 4px;
-        }
-        .experience-item, .education-item { 
-            margin-bottom: 18px; 
-            page-break-inside: avoid;
-        }
-        .job-title { 
-            font-weight: bold; 
-            font-size: 12pt; 
-            color: #1f2937;
-            margin-bottom: 4px;
-        }
-        .company { 
-            color: #666; 
-            font-size: 10pt; 
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-        .date { 
-            color: #888; 
-            font-size: 9pt; 
-            float: right; 
-            background: #f3f4f6;
-            padding: 2px 6px;
-            border-radius: 8px;
-        }
-        .description { 
-            margin-top: 8px; 
-            line-height: 1.5;
-            font-size: 10pt;
-        }
-        .skills { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 8px; 
-        }
-        .skill { 
-            background: #3b82f6; 
-            color: white;
-            padding: 4px 10px; 
-            border-radius: 12px; 
-            font-size: 9pt; 
-            font-weight: 500;
-        }
-        @media print { 
-            body { 
-                margin: 0; 
-                padding: 0; 
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            .container {
-                padding: 0;
-            }
-            .section { 
-                page-break-inside: avoid; 
-            }
-        }
-    </style>
-    <script>
-        window.onload = function() {
-            // Auto-print when opened
-            setTimeout(function() {
-                window.print();
-            }, 500);
-        }
-    </script>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="name">${personalInfo.fullName}</div>
-            <div class="contact">
-                ${personalInfo.email}${personalInfo.phone ? ` • ${personalInfo.phone}` : ""}${
-                  personalInfo.location ? ` • ${personalInfo.location}` : ""
-                }
-                ${personalInfo.linkedin ? `<br>${personalInfo.linkedin}` : ""}
-            </div>
-        </div>
-
-        ${
-          personalInfo.summary
-            ? `
-        <div class="section">
-            <div class="section-title">Professional Summary</div>
-            <div class="summary">${personalInfo.summary}</div>
-        </div>
-        `
-            : ""
-        }
-
-        <div class="section">
-            <div class="section-title">Work Experience</div>
-            ${experiences
-              .map(
-                (exp: any) => `
-            <div class="experience-item">
-                <div class="job-title">${exp.position}</div>
-                <div class="company">${exp.company} <span class="date">${exp.startDate} - ${exp.endDate || "Present"}</span></div>
-                ${exp.description ? `<div class="description">${exp.description.replace(/\n/g, "<br>")}</div>` : ""}
-            </div>
-            `,
-              )
-              .join("")}
-        </div>
-
-        <div class="section">
-            <div class="section-title">Education</div>
-            ${education
-              .map(
-                (edu: any) => `
-            <div class="education-item">
-                <div class="job-title">${edu.degree}${edu.field ? ` in ${edu.field}` : ""}</div>
-                <div class="company">${edu.institution} <span class="date">${edu.graduationDate}</span></div>
-            </div>
-            `,
-              )
-              .join("")}
-        </div>
-
-        <div class="section">
-            <div class="section-title">Skills</div>
-            <div class="skills">
-                ${skills.map((skill: any) => `<span class="skill">${skill.name}</span>`).join("")}
-            </div>
-        </div>
-    </div>
-</body>
-</html>`
-}
-
-function generateRTF(resumeData: any) {
-  const { personalInfo, experiences, education, skills } = resumeData
-
-  // RTF header
-  let rtf = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}{\\f1 Arial;}}
-{\\colortbl;\\red37\\green99\\blue235;\\red102\\green102\\blue102;\\red0\\green0\\blue0;}
-\\f1\\fs22`
-
-  // Name (centered, large, blue)
-  rtf += `\\qc\\fs32\\cf1\\b ${personalInfo.fullName}\\b0\\fs22\\cf3\\par\\par`
-
-  // Contact info (centered)
-  const contactInfo = [personalInfo.email, personalInfo.phone, personalInfo.location, personalInfo.linkedin]
-    .filter(Boolean)
-    .join(" • ")
-  rtf += `\\qc\\fs20\\cf2 ${contactInfo}\\cf3\\fs22\\par`
-
-  // Line separator
-  rtf += `\\par\\ql\\brdrb\\brdrs\\brdrw15\\brsp20\\par\\par`
-
-  // Professional Summary
-  if (personalInfo.summary) {
-    rtf += `\\fs24\\cf1\\b PROFESSIONAL SUMMARY\\b0\\cf3\\fs22\\par`
-    rtf += `\\i ${personalInfo.summary}\\i0\\par\\par`
-  }
-
-  // Work Experience
-  if (experiences.length > 0) {
-    rtf += `\\fs24\\cf1\\b WORK EXPERIENCE\\b0\\cf3\\fs22\\par`
-    experiences.forEach((exp: any) => {
-      rtf += `\\b ${exp.position}\\b0\\par`
-      rtf += `\\cf2 ${exp.company} | ${exp.startDate} - ${exp.endDate || "Present"}\\cf3\\par`
-      if (exp.description) {
-        rtf += `${exp.description.replace(/\n/g, "\\par")}\\par`
-      }
-      rtf += `\\par`
-    })
-  }
-
-  // Education
-  if (education.length > 0) {
-    rtf += `\\fs24\\cf1\\b EDUCATION\\b0\\cf3\\fs22\\par`
-    education.forEach((edu: any) => {
-      rtf += `\\b ${edu.degree}${edu.field ? ` in ${edu.field}` : ""}\\b0\\par`
-      rtf += `\\cf2 ${edu.institution} | ${edu.graduationDate}\\cf3\\par\\par`
-    })
-  }
-
-  // Skills
-  if (skills.length > 0) {
-    rtf += `\\fs24\\cf1\\b SKILLS\\b0\\cf3\\fs22\\par`
-    const skillsText = skills.map((skill: any) => skill.name).join(" • ")
-    rtf += `${skillsText}\\par`
-  }
-
-  rtf += "}"
-  return rtf
 }

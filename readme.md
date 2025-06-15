@@ -53,8 +53,8 @@ AI Resume Grader is an intelligent platform that provides instant, actionable fe
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ai-resume-grader.git
-   cd ai-resume-grader
+   git clone https://github.com/chimt4chi/Resume-grader.git
+   cd Resume-grader
    ```
 
 2. **Install dependencies**
@@ -132,7 +132,7 @@ const analysis = await generateObject({
 ## 🏗️ Project Structure
 
 ```
-ai-resume-grader/
+Resume-grader/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API routes
 │   ├── globals.css        # Global styles
@@ -174,60 +174,6 @@ OPENAI_API_KEY=your_openai_api_key
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
 
-### Customization
-- **Themes**: Modify `tailwind.config.ts` for custom colors
-- **AI Prompts**: Update prompts in `app/api/analyze-resume/route.ts`
-- **Scoring Logic**: Adjust scoring algorithms in the analysis engine
-
-## 🚧 Hackathon Limitations & Future Improvements
-
-### Current Limitations
-- **File Parsing**: Simulated text extraction (would need PDF/DOCX parsers in production)
-- **AI Costs**: OpenAI API usage costs (demo mode available)
-- **Storage**: Local storage only (would need database for production)
-- **Authentication**: No user accounts (would add in production)
-
-### Future Enhancements
-- [ ] Real PDF/DOCX parsing with libraries like `pdf-parse` or `mammoth`
-- [ ] User authentication and cloud storage
-- [ ] Multiple resume templates
-- [ ] ATS compatibility testing
-- [ ] Resume comparison features
-- [ ] Integration with job boards
-- [ ] Advanced analytics and insights
-- [ ] Team collaboration features
-
-## 🏆 Hackathon Achievements
-
-### What We Built
-- ✅ **Full-stack Application** - Complete resume analysis platform
-- ✅ **AI Integration** - OpenAI GPT-4 for intelligent analysis
-- ✅ **Modern UI/UX** - Professional, responsive design
-- ✅ **Real-time Feedback** - Instant analysis and notifications
-- ✅ **Resume Builder** - Complete resume creation tool
-- ✅ **Error Handling** - Robust fallback systems
-
-### Technical Highlights
-- **AI-Powered Analysis** with structured output validation
-- **Modern React Patterns** with TypeScript and Next.js 15
-- **Responsive Design** with Tailwind CSS and custom components
-- **Error Resilience** with graceful fallbacks and user feedback
-- **Performance Optimized** with efficient state management
-
-## 🤝 Contributing
-
-This is a hackathon project, but contributions are welcome!
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🙏 Acknowledgments
 
 - **OpenAI** for providing the GPT-4 API
@@ -239,60 +185,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Contact
 
 **Team Members:**
-- Your Name - [@yourhandle](https://twitter.com/yourhandle)
-- Team Member 2 - [@handle2](https://twitter.com/handle2)
+- Rohit Singh - [@https://x.com/iShowCoding](https://x.com/iShowCoding)
 
-**Project Link:** [https://github.com/yourusername/ai-resume-grader](https://github.com/yourusername/ai-resume-grader)
 
-**Live Demo:** [https://ai-resume-grader.vercel.app](https://ai-resume-grader.vercel.app)
+**Project Link:** [https://github.com/chimt4chi/Resume-grader](https://github.com/chimt4chi/Resume-grader)
+
+**Live Demo:** [https://resume-grader-gold.vercel.app/](https://resume-grader-gold.vercel.app/)
 
 ---
 
 <div align="center">
-  <p>Built with ❤️ for [Hackathon Name] 2024</p>
+  <p>Built with ❤️ for Anveshan - Hackathon 2025</p>
   <p>⭐ Star this repo if you found it helpful!</p>
 </div>
 ```
-
-This README file is specifically tailored for a hackathon project and includes:
-
-## 🎯 **Hackathon-Specific Elements:**
-
-**Project Positioning:**
-- Clear hackathon project badge and context
-- Emphasis on rapid development and innovation
-- Realistic scope and limitations acknowledgment
-
-**Technical Showcase:**
-- Comprehensive tech stack highlighting modern tools
-- Code snippets showing AI integration
-- Architecture overview demonstrating complexity
-
-**Demo-Friendly:**
-- Quick start guide for judges/reviewers
-- Clear feature explanations with benefits
-- Visual hierarchy with emojis and formatting
-
-## 📋 **Key Sections:**
-
-**Overview & Features:**
-- Compelling project description
-- Clear value proposition
-- Feature highlights with icons
-
-**Technical Details:**
-- Complete tech stack
-- Installation instructions
-- Project structure
-
-**Hackathon Context:**
-- Current limitations (honest assessment)
-- Future improvements (showing vision)
-- Achievements and technical highlights
-
-**Professional Touch:**
-- Contributing guidelines
-- License information
-- Contact details and team info
-
-The README positions your project as a sophisticated, well-architected solution while being honest about hackathon constraints and future potential!
